@@ -31,5 +31,9 @@ public interface ComponentLoader {
     public Collection<AbstractComponent> loadComponents();
     
     public ConfigurationNode getConfiguration(AbstractComponent component);
-    
+
+    public AbstractComponent instantiateComponent(Class<?> clazz) throws Throwable;
+
+    public boolean isComponentClass(Class<?> clazz);
+
 }

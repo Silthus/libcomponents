@@ -28,21 +28,45 @@ public abstract class ComponentManager<T extends AbstractComponent> {
         return loaders.add(loader);
     }
 
-
     public synchronized boolean loadComponents() throws InvalidComponentException {
+
         for (ComponentLoader loader : loaders) {
             for (AbstractComponent baseComponent : loader.loadComponents()) {
-                if (!componentClass.isAssignableFrom(baseComponent.getClass())) {
-                    throw new InvalidComponentException(baseComponent.getClass(), "Component is not an instance of " + componentClass.getCanonicalName());
-                }
-                T component = componentClass.cast(baseComponent);
-                ComponentInformation info = component.getClass().getAnnotation(ComponentInformation.class);
-                component.setUp(loader, info);
-                setUpComponent(component);
-                registeredComponents.put(info.friendlyName().replaceAll(" ", "-").toLowerCase(), component);
+                loadComponent(baseComponent, loader);
             }
         }
         return true;
+    }
+
+    private void loadComponent(AbstractComponent baseComponent, ComponentLoader loader) throws InvalidComponentException {
+
+        if (!componentClass.isAssignableFrom(baseComponent.getClass())) {
+            throw new InvalidComponentException(baseComponent.getClass(), "Component is not an instance of " + componentClass.getCanonicalName());
+        }
+        T component = componentClass.cast(baseComponent);
+        ComponentInformation info = component.getClass().getAnnotation(ComponentInformation.class);
+        String id = info.friendlyName().replaceAll(" ", "-").toLowerCase();
+        // we dont want to register components that are already registered
+        if (registeredComponents.containsKey(id)) {
+            return;
+        }
+        // lets load the dependent components first
+        if (component.getClass().isAnnotationPresent(Depend.class)) {
+            Class<?>[] dependingComponents = component.getClass().getAnnotation(Depend.class).components();
+            for (Class<?> clazz : dependingComponents) {
+                if (loader.isComponentClass(clazz) && clazz != component.getClass()) {
+                    try {
+                        loadComponent(loader.instantiateComponent(clazz), loader);
+                    } catch (Throwable t) {
+                        logger.warning("Error initializing component " + clazz + ": " + t.getMessage());
+                        t.printStackTrace();
+                    }
+                }
+            }
+        }
+        component.setUp(loader, info);
+        setUpComponent(component);
+        registeredComponents.put(id, component);
     }
 
     protected abstract void setUpComponent(T component);

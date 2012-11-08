@@ -64,7 +64,8 @@ public abstract class AbstractComponentLoader implements ComponentLoader {
      * @return An instance of the component class
      * @throws Throwable when an error occurs while initializing the component for some reason.
      */
-    protected AbstractComponent instantiateComponent(Class<?> clazz) throws Throwable {
+    @Override
+    public AbstractComponent instantiateComponent(Class<?> clazz) throws Throwable {
         // Do we have the component information?
         if (!clazz.isAnnotationPresent(ComponentInformation.class)) {
             throw new InvalidComponentException(clazz, "No ComponentInformation annotation!");
@@ -74,7 +75,8 @@ public abstract class AbstractComponentLoader implements ComponentLoader {
         Constructor<? extends AbstractComponent> construct = clazz.asSubclass(AbstractComponent.class).getConstructor();
         return construct.newInstance();
     }
-    
+
+    @Override
     public boolean isComponentClass(Class<?> clazz) {
         return clazz != null && AbstractComponent.class.isAssignableFrom(clazz);
     }
